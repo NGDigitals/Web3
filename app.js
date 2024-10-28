@@ -7,29 +7,22 @@ async function loadContractData() {
     try {
         const abiResponse = await fetch(`${serverUrl}/VotingContractAbi.json`);
         const abi = await abiResponse.json();
-        
         const addressResponse = await fetch(`${serverUrl}/VotingContractAddress.txt`);
         const address = await addressResponse.text();
-
-        const trimmedAddress = address.trim();
-
-        return { abi, address: trimmedAddress };
+        return { abi, address: address.trim() };
     } catch (error) {
         console.error("Error loading contract data:", error);
         throw error;
     }
 }
 
-// Function to load candidates
-async function loadCandidates() {
+const fetchCandidates = async() => {
     try {
         const { abi, address } = await loadContractData();
         const contract = new web3.eth.Contract(abi, address);
 
-        // Get the list of candidates
-        const candidates = await contract.methods.getCandidates().call();
-
         // Fetch and display votes for all candidates
+        const candidates = await contract.methods.listCandidates().call();
         const votesList = await Promise.all(
             candidates.map((candidate) =>
                 contract.methods
@@ -39,21 +32,18 @@ async function loadCandidates() {
                 )
         );
 
-        let result = "Candidates Votes:\n";
-        // let result = "";
+        let result = [];
         votesList.forEach(({ candidate, votes }) => {
-            // result.push({'candidate': candidate, 'votes': votes})
-            result += `${candidate}: ${votes} votes\n`;
+            result.push({'candidate': candidate, 'votes': 
+                    typeof votes === "bigint" ? votes.toString() + "n" : votes})
         });
-        console.log(votesList)
         return result;
     } catch (error) {
         console.error(error);
     }
 }
 
-// Function to vote for a candidate
-async function voteForCandidate(candidate) {
+const voteForCandidate = async(candidate) => {
     try {
         if (!candidate) {
             return console.error('Invalid vote');
@@ -64,19 +54,18 @@ async function voteForCandidate(candidate) {
         const accounts = await web3.eth.getAccounts();
         const defaultAccount = accounts[0];
 
-        // Cast a vote for the selected candidate
-        const receipt = await contract.methods.voteForCandidate(candidate)
+        const receipt = await contract.methods.voteFor(candidate)
             .send({from: defaultAccount, gas: 1000000, gasPrice: "10000000000"});
         console.log("Transaction Hash: " + receipt.transactionHash);
+        console.log('Recept:', JSON.stringify(receipt, (key, value) => {
+            return typeof value === "bigint" ? value.toString() + "n" : value
+        }))
 
-        return await loadCandidates(); // Fetch list
+        // Fetch and return updated list
+        return await fetchCandidates();
     } catch (error) {
         console.error(error);
     }
 }
 
-module.exports = {loadCandidates, voteForCandidate}
-// loadCandidates()
-// voteForCandidate('Candidate1')
-// voteForCandidate('Candidate1')
-// voteForCandidate('Candidate3')
+module.exports = {fetchCandidates, voteForCandidate}

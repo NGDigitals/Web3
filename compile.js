@@ -1,6 +1,6 @@
+const fs = require("fs");
 const solc = require("solc");
 const path = require("path");
-const fs = require("fs");
 
 const contractName = "VotingContract";
 const fileName = `${contractName}.sol`;
@@ -26,26 +26,16 @@ const input = {
     },
 };
 
-// Compile the Solidity code using solc
+// Compile Solidity
 const compiledCode = JSON.parse(solc.compile(JSON.stringify(input)));
 
-// Get the bytecode from the compiled contract
 const bytecode =
     compiledCode.contracts[fileName][contractName].evm.bytecode.object;
 
-// Write the bytecode to a new file
 const bytecodePath = path.join(__dirname, "VotingContractBytecode.bin");
 fs.writeFileSync(bytecodePath, bytecode);
 
-// Log the compiled contract code to the console
-console.log("Contract Bytecode:\n", bytecode);
-
-// Get the ABI from the compiled contract in javascript blockchain env
+// Get the ABI from the compiled contract and write it to a json file
 const abi = compiledCode.contracts[fileName][contractName].abi;
-
-// Write the Contract ABI to a new file
 const abiPath = path.join(__dirname, "VotingContractAbi.json");
 fs.writeFileSync(abiPath, JSON.stringify(abi, null, "\t"));
-
-// Log the Contract ABI to the console
-console.log("Contract ABI:\n", abi);
